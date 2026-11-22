@@ -1,0 +1,458 @@
+diff --git a/examples/taskinfo_test/CMakeLists.txt b/examples/taskinfo_test/CMakeLists.txt
+new file mode 100644
+index 000000000..e8362889d
+--- /dev/null
++++ b/examples/taskinfo_test/CMakeLists.txt
+@@ -0,0 +1,36 @@
++# ##############################################################################
++# apps/examples/taskinfo_test/CMakeLists.txt
++#
++#
++# SPDX-License-Identifier: Apache-2.0
++#
++# Licensed to the Apache Software Foundation (ASF) under one or more
++# contributor license agreements.  See the NOTICE file distributed with
++# this work for additional information regarding copyright ownership.  The
++# ASF licenses this file to you under the Apache License, Version 2.0 (the
++# "License"); you may not use this file except in compliance with the
++# License.  You may obtain a copy of the License at
++#
++#   http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
++# License for the specific language governing permissions and limitations
++# under the License.
++#
++# ##############################################################################
++
++if(CONFIG_EXAMPLES_TASKINFO_TEST)
++  nuttx_add_application(
++    NAME
++    ${CONFIG_EXAMPLES_TASKINFO_TEST_PROGNAME}
++    SRCS
++    taskinfo_test_main.c
++    STACKSIZE
++    ${CONFIG_EXAMPLES_TASKINFO_TEST_STACKSIZE}
++    PRIORITY
++    ${CONFIG_EXAMPLES_TASKINFO_TEST_PRIORITY}
++    MODULE
++    ${CONFIG_EXAMPLES_TASKINFO_TEST})
++endif()
+diff --git a/examples/taskinfo_test/Kconfig b/examples/taskinfo_test/Kconfig
+new file mode 100644
+index 000000000..98ed1a2c3
+--- /dev/null
++++ b/examples/taskinfo_test/Kconfig
+@@ -0,0 +1,27 @@
++#
++# For a description of the syntax of this configuration file,
++# see the file kconfig-language.txt in the NuttX tools repository.
++#
++
++config EXAMPLES_TASKINFO_TEST
++	tristate "taskinfo() system call test"
++	default n
++	depends on SCHED_TASKINFO
++	---help---
++		Test application for the taskinfo() system call.
++
++if EXAMPLES_TASKINFO_TEST
++
++config EXAMPLES_TASKINFO_TEST_PROGNAME
++	string "Program name"
++	default "taskinfo_test"
++
++config EXAMPLES_TASKINFO_TEST_PRIORITY
++	int "Task priority"
++	default 100
++
++config EXAMPLES_TASKINFO_TEST_STACKSIZE
++	int "Stack size"
++	default 4096
++
++endif
+diff --git a/examples/taskinfo_test/Make.defs b/examples/taskinfo_test/Make.defs
+new file mode 100644
+index 000000000..a9752f856
+--- /dev/null
++++ b/examples/taskinfo_test/Make.defs
+@@ -0,0 +1,26 @@
++############################################################################
++# apps/examples/taskinfo_test/Make.defs
++#
++#
++# SPDX-License-Identifier: Apache-2.0
++#
++# Licensed to the Apache Software Foundation (ASF) under one or more
++# contributor license agreements.  See the NOTICE file distributed with
++# this work for additional information regarding copyright ownership.  The
++# ASF licenses this file to you under the Apache License, Version 2.0 (the
++# "License"); you may not use this file except in compliance with the
++# License.  You may obtain a copy of the License at
++#
++#   http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
++# License for the specific language governing permissions and limitations
++# under the License.
++#
++############################################################################
++
++ifneq ($(CONFIG_EXAMPLES_TASKINFO_TEST),)
++CONFIGURED_APPS += $(APPDIR)/examples/taskinfo_test
++endif
+diff --git a/examples/taskinfo_test/Makefile b/examples/taskinfo_test/Makefile
+new file mode 100644
+index 000000000..6725343c7
+--- /dev/null
++++ b/examples/taskinfo_test/Makefile
+@@ -0,0 +1,33 @@
++############################################################################
++# apps/examples/taskinfo_test/Makefile
++#
++#
++# SPDX-License-Identifier: Apache-2.0
++#
++# Licensed to the Apache Software Foundation (ASF) under one or more
++# contributor license agreements.  See the NOTICE file distributed with
++# this work for additional information regarding copyright ownership.  The
++# ASF licenses this file to you under the Apache License, Version 2.0 (the
++# "License"); you may not use this file except in compliance with the
++# License.  You may obtain a copy of the License at
++#
++#   http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
++# License for the specific language governing permissions and limitations
++# under the License.
++#
++############################################################################
++
++include $(APPDIR)/Make.defs
++
++PROGNAME = $(CONFIG_EXAMPLES_TASKINFO_TEST_PROGNAME)
++PRIORITY = $(CONFIG_EXAMPLES_TASKINFO_TEST_PRIORITY)
++STACKSIZE = $(CONFIG_EXAMPLES_TASKINFO_TEST_STACKSIZE)
++MODULE = $(CONFIG_EXAMPLES_TASKINFO_TEST)
++
++MAINSRC = taskinfo_test_main.c
++
++include $(APPDIR)/Application.mk
+diff --git a/examples/taskinfo_test/taskinfo_test_main.c b/examples/taskinfo_test/taskinfo_test_main.c
+new file mode 100644
+index 000000000..e11ac7405
+--- /dev/null
++++ b/examples/taskinfo_test/taskinfo_test_main.c
+@@ -0,0 +1,306 @@
++/****************************************************************************
++ * apps/examples/taskinfo_test/taskinfo_test_main.c
++ *
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ *
++ * Licensed to the Apache Software Foundation (ASF) under one or more
++ * contributor license agreements.  See the NOTICE file distributed with
++ * this work for additional information regarding copyright ownership.  The
++ * ASF licenses this file to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance with the
++ * License.  You may obtain a copy of the License at
++ *
++ *   http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
++ * License for the specific language governing permissions and limitations
++ * under the License.
++ *
++ ****************************************************************************/
++
++/****************************************************************************
++ * Included Files
++ ****************************************************************************/
++
++#include <nuttx/config.h>
++
++#include <sys/types.h>
++#include <sys/taskinfo.h>
++#include <errno.h>
++#include <stdbool.h>
++#include <sched.h>
++#include <stdio.h>
++#include <string.h>
++#include <unistd.h>
++
++#include <nuttx/sched.h>
++
++/****************************************************************************
++ * Private Data
++ ****************************************************************************/
++
++static int g_passed;
++static int g_failed;
++
++/****************************************************************************
++ * Private Functions
++ ****************************************************************************/
++
++#define CHECK(cond, msg) \
++  do \
++    { \
++      if (cond) \
++        { \
++          g_passed++; \
++          printf("  [PASS] %s\n", msg); \
++        } \
++      else \
++        { \
++          g_failed++; \
++          printf("  [FAIL] %s (line %d)\n", msg, __LINE__); \
++        } \
++    } \
++  while (0)
++
++static const char *state_name(int state)
++{
++  switch (state)
++    {
++      case TSTATE_TASK_PENDING:
++        return "PENDING";
++
++      case TSTATE_TASK_READYTORUN:
++        return "READY";
++
++#ifdef CONFIG_SMP
++      case TSTATE_TASK_ASSIGNED:
++        return "ASSIGNED";
++
++#endif
++      case TSTATE_TASK_RUNNING:
++        return "RUNNING";
++
++      case TSTATE_TASK_INACTIVE:
++        return "INACTIVE";
++
++      case TSTATE_WAIT_SEM:
++        return "WAIT_SEM";
++
++      case TSTATE_WAIT_SIG:
++        return "SLEEPING";
++
++#if !defined(CONFIG_DISABLE_MQUEUE) || !defined(CONFIG_DISABLE_MQUEUE_SYSV)
++      case TSTATE_WAIT_MQNOTEMPTY:
++        return "WAIT_MQ_NE";
++
++      case TSTATE_WAIT_MQNOTFULL:
++        return "WAIT_MQ_NF";
++
++#endif
++      default:
++        return "OTHER";
++    }
++}
++
++static const char *policy_name(int policy)
++{
++  switch (policy)
++    {
++      case SCHED_FIFO:
++        return "SCHED_FIFO";
++
++      case SCHED_RR:
++        return "SCHED_RR";
++
++      case SCHED_SPORADIC:
++        return "SCHED_SPORADIC";
++
++      default:
++
++        return "SCHED_OTHER";
++    }
++}
++
++static void print_info(const struct taskinfo_s *i)
++{
++  printf("    pid=%d name=\"%s\" state=%s prio=%u policy=%s\n",
++         (int)i->pid, i->name, state_name(i->state), i->priority,
++         policy_name(i->policy));
++  printf("    stack=%zu used=%zu switches=%lu\n",
++         i->stack_size, i->stack_used, (unsigned long)i->switches);
++}
++
++/* Task that just sleeps; used as a target for taskinfo() */
++
++static int sleeper_main(int argc, char *argv[])
++{
++  sleep(30);
++  return 0;
++}
++
++/* Recurse to touch some stack, then return */
++
++static int touch_stack(int depth)
++{
++  volatile char buf[128];
++
++  memset((void *)buf, depth, sizeof(buf));
++  if (depth > 0)
++    {
++      return touch_stack(depth - 1) + buf[0];
++    }
++
++  return buf[0];
++}
++
++/* Fresh task (no earlier deep calls): sample its stack usage before and
++ * after recursing.  The high-water mark can only grow, so a fresh task is
++ * needed to see a difference.
++ */
++
++static volatile bool g_worker_done;
++static struct taskinfo_s g_before;
++static struct taskinfo_s g_after;
++
++static int worker_main(int argc, char *argv[])
++{
++  taskinfo(0, &g_before);
++  touch_stack(10);
++  taskinfo(0, &g_after);
++  g_worker_done = true;
++  return 0;
++}
++
++/****************************************************************************
++ * Public Functions
++ ****************************************************************************/
++
++int main(int argc, FAR char *argv[])
++{
++  struct taskinfo_s info;
++  struct taskinfo_s info2;
++  struct sched_param param;
++  pid_t pid;
++  pid_t wpid;
++  int ret;
++
++  printf("taskinfo() test\n");
++
++  /* 1. Normal use: the calling task, pid == 0 and pid == getpid() */
++
++  printf("\n[1] Calling task\n");
++  memset(&info, 0xaa, sizeof(info));
++  ret = taskinfo(0, &info);
++  CHECK(ret == 0, "taskinfo(0) returns 0");
++  print_info(&info);
++  CHECK(info.pid == getpid(), "pid == getpid()");
++  CHECK(info.state == TSTATE_TASK_RUNNING, "caller is RUNNING");
++  CHECK(info.stack_size > 0, "stack_size > 0");
++  CHECK(info.stack_used > 0 && info.stack_used <= info.stack_size,
++        "0 < stack_used <= stack_size");
++
++  ret = taskinfo(getpid(), &info2);
++  CHECK(ret == 0, "taskinfo(getpid()) returns 0");
++  CHECK(info2.pid == info.pid && info2.priority == info.priority &&
++        strcmp(info2.name, info.name) == 0,
++        "pid==0 and pid==getpid() agree");
++
++  /* 2. Another task: name, priority, state */
++
++  printf("\n[2] Another task\n");
++  pid = task_create("sleeper", 90, 2048, sleeper_main, NULL);
++  CHECK(pid > 0, "task_create(sleeper)");
++  usleep(100 * 1000);
++
++  ret = taskinfo(pid, &info);
++  CHECK(ret == 0, "taskinfo(sleeper) returns 0");
++  print_info(&info);
++  CHECK(info.pid == pid, "pid matches");
++  CHECK(strcmp(info.name, "sleeper") == 0, "name == \"sleeper\"");
++  CHECK(info.priority == 90, "priority == 90");
++  CHECK(info.state == TSTATE_WAIT_SIG, "state is SLEEPING");
++  CHECK(info.policy == SCHED_FIFO || info.policy == SCHED_RR,
++        "policy is SCHED_FIFO or SCHED_RR (inherited)");
++  CHECK(info.stack_size >= 2048, "stack_size >= 2048");
++  CHECK(info.switches >= 1, "switches >= 1");
++
++  /* 3. Changes are reflected: policy and priority */
++
++  printf("\n[3] Policy and priority change\n");
++  param.sched_priority = 91;
++  param.sched_priority = 90;
++  ret = sched_setscheduler(pid, SCHED_FIFO, &param);
++  CHECK(ret == 0, "sched_setscheduler(SCHED_FIFO, 90)");
++  ret = taskinfo(pid, &info);
++  CHECK(ret == 0 && info.policy == SCHED_FIFO, "policy == SCHED_FIFO");
++  param.sched_priority = 91;
++  ret = sched_setscheduler(pid, SCHED_RR, &param);
++  CHECK(ret == 0, "sched_setscheduler(SCHED_RR, 91)");
++  ret = taskinfo(pid, &info);
++  CHECK(ret == 0 && info.policy == SCHED_RR, "policy == SCHED_RR");
++  CHECK(info.priority == 91, "priority == 91");
++
++  /* 4. The switch counter grows when the task is scheduled again */
++
++  printf("\n[4] Context switch counter\n");
++  ret = taskinfo(0, &info);
++  usleep(50 * 1000);
++  ret |= taskinfo(0, &info2);
++  CHECK(ret == 0 && info2.switches > info.switches,
++        "caller's switches grows after usleep()");
++  printf("    %lu -> %lu\n", (unsigned long)info.switches,
++         (unsigned long)info2.switches);
++
++  /* 5. Stack usage (high-water mark) grows with deeper calls */
++
++  printf("\n[5] Stack usage\n");
++  g_worker_done = false;
++  wpid = task_create("worker", 90, 4096, worker_main, NULL);
++  CHECK(wpid > 0, "task_create(worker)");
++  for (ret = 0; ret < 50 && !g_worker_done; ret++)
++    {
++      usleep(20 * 1000);
++    }
++
++  CHECK(g_worker_done, "worker finished");
++  CHECK(g_after.stack_used > g_before.stack_used,
++        "stack_used grows after deeper calls");
++  printf("    %zu -> %zu\n", g_before.stack_used, g_after.stack_used);
++
++  /* 6. Error handling */
++
++  printf("\n[6] Errors\n");
++  errno = 0;
++  ret = taskinfo(0, NULL);
++  CHECK(ret == -1 && errno == EINVAL, "info == NULL -> -1/EINVAL");
++
++  errno = 0;
++  ret = taskinfo(-1, &info);
++  CHECK(ret == -1 && errno == EINVAL, "pid < 0 -> -1/EINVAL");
++
++  errno = 0;
++  ret = taskinfo(32000, &info);
++  CHECK(ret == -1 && errno == ESRCH, "nonexistent pid -> -1/ESRCH");
++
++  memset(&info, 0x55, sizeof(info));
++  memset(&info2, 0x55, sizeof(info2));
++  taskinfo(32000, &info);
++  CHECK(memcmp(&info, &info2, sizeof(info)) == 0,
++        "info untouched on error");
++
++  /* 7. Terminated task */
++
++  printf("\n[7] Terminated task\n");
++  ret = task_delete(pid);
++  CHECK(ret == 0, "task_delete(sleeper)");
++  usleep(50 * 1000);
++  errno = 0;
++  ret = taskinfo(pid, &info);
++  CHECK(ret == -1 && errno == ESRCH, "deleted task -> -1/ESRCH");
++
++  printf("\nResult: %d passed, %d failed\n", g_passed, g_failed);
++  return g_failed == 0 ? 0 : 1;
++}
